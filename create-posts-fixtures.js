@@ -9,6 +9,8 @@ var Writer = require('broccoli-writer');
 var path = require('path');
 var fs = require('fs');
 var RSVP = require('rsvp');
+var mkdirp = require('mkdirp');
+// var Funnel = require('broccoli-funnel');
 // var helpers = require('broccoli-kitchen-sink-helpers');
 var walkSync = require('walk-sync');
 
@@ -33,70 +35,9 @@ var replaceHandlebars = function(text) {
   return text.replace(/{{/g, '&#123;&#123;').replace(/}}/g, '&#125;&#125;');
 }
 
-/**
-Create
-*/
-
-function CreatePostsFixtures(inputTree, options) {
-  if (!(this instanceof CreatePostsFixtures)) {
-    return new CreatePostsFixtures(inputTree, options);
-  }
-
-  // Filter.call(this, inputTree, options); // this._super()
-
-  // console.log(inputTree);
-
-  console.log('cpf');
-
-  this.inputTree = inputTree;
-  this.options = options || {};
-}
-
-CreatePostsFixtures.prototype = Object.create(Writer.prototype);
-CreatePostsFixtures.prototype.constructor = CreatePostsFixtures;
-CreatePostsFixtures.prototype.extensions = ['md'];
-CreatePostsFixtures.prototype.targetExtension = 'js';
-
-CreatePostsFixtures.prototype.write = function(readTree, destDir) {
-  var _this = this;
-
-  return readTree(this.inputTree).then(function(srcDir) {
-    var filePaths = walkSync(srcDir);
-
-    filePaths.forEach(function(filePath) {
-      var srcFilePath  = path.join(srcDir, filePath);
-
-      if (srcFilePath.slice(-1) === '/') {
-        // mkdirp.sync(destFilePath);
-        return;
-      }
-
-      var content = fs.readFileSync(srcFilePath, {encoding: 'utf8'});
-      console.log(content);
-    });
-
-    // var promise = new RSVP.Promise(function(resolve, reject) {
-    //   someAsyncFunc(function(error, asyncData) {
-    //     if (error) {
-    //       rejectPromise(err);
-    //     } else {
-    //       resolvePromise(asyncData);
-    //     }
-    //   });
-    // });
-
-    // return promise;
-    // console.log(getFiles(srcDir));
-  });
-}
-
-CreatePostsFixtures.prototype.processFile = function (srcDir, destDir, relativePath) {
-  console.log('farts');
-}
-
-CreatePostsFixtures.prototype.processString = function(string, relativePath) {
+var parsePost = function(content) {
   var customRenderer = new marked.Renderer();
-  var post = jsYaml.loadFront(string);
+  var post = jsYaml.loadFront(content);
 
   console.log('processString');
 
@@ -149,6 +90,91 @@ CreatePostsFixtures.prototype.processString = function(string, relativePath) {
   post = JSON.stringify(post);
 
   return "import Em from 'ember';\nexport default " + post;
+}
+
+/**
+Create
+*/
+
+function CreatePostsFixtures(inputTree, options) {
+  if (!(this instanceof CreatePostsFixtures)) {
+    return new CreatePostsFixtures(inputTree, options);
+  }
+
+  // Filter.call(this, inputTree, options); // this._super()
+
+  // console.log(inputTree);
+
+  console.log('cpf');
+
+  this.inputTree = inputTree;
+  this.options = options || {};
+}
+
+CreatePostsFixtures.prototype = Object.create(Writer.prototype);
+CreatePostsFixtures.prototype.constructor = CreatePostsFixtures;
+CreatePostsFixtures.prototype.extensions = ['md'];
+CreatePostsFixtures.prototype.targetExtension = 'js';
+
+CreatePostsFixtures.prototype.write = function(readTree, destDir) {
+  var _this = this;
+
+  return readTree(this.inputTree).then(function(srcDir) {
+    // return new RSVP.Promise(function(resolve, reject) {
+      var filePaths = walkSync(srcDir);
+      // var markdownFiles = new Funnel('_this.inputTree, '{
+      //   exclude: [new RegExp(/posts/)],
+      //   destDir: destDir
+      // });
+
+      // console.log(markdownFiles);
+
+      filePaths.forEach(function(filePath) {
+        var srcFilePath  = path.join(srcDir, filePath);
+        var destFilePath  = path.join(destDir, filePath);
+
+        var isDirectory = srcFilePath.slice(-1) === '/';
+        var isNotMarkdown = srcFilePath.indexOf('.md') === -1;
+        var content;
+
+        if (isDirectory) {
+          mkdirp.sync(destFilePath);
+          return;
+        }
+
+        content = fs.readFileSync(srcFilePath, { encoding: 'utf8' });
+
+        if (isNotMarkdown) {
+          fs.writeFileSync(destFilePath, content, 'utf8');
+          return;
+        }
+
+        // console.log(destFilePath);
+        content = parsePost(content);
+        console.log(content);
+        fs.writeFileSync(destFilePath.replace('.md','.js'), content, 'utf8');
+      // });
+
+      // resolve();
+    });
+
+    // var promise = new RSVP.Promise(function(resolve, reject) {
+    //   someAsyncFunc(function(error, asyncData) {
+    //     if (error) {
+    //       rejectPromise(err);
+    //     } else {
+    //       resolvePromise(asyncData);
+    //     }
+    //   });
+    // });
+
+    // return promise;
+    // console.log(getFiles(srcDir));
+  });
+}
+
+CreatePostsFixtures.prototype.processFile = function (srcDir, destDir, relativePath) {
+  console.log('farts');
 }
 
 module.exports = CreatePostsFixtures;
