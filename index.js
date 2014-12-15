@@ -1,13 +1,13 @@
 var blogPostsParser = require('./blog-posts-parser');
-var concat = require('broccoli-concat');
+// var concat = require('broccoli-concat');
 var Funnel = require('broccoli-funnel');
 var mergeTrees = require('broccoli-merge-trees');
 
 module.exports = {
-  header: 'export default [',
-  footer: '];var FINDME;',
+  // header: 'export default [',
+  // footer: '];var FINDME;',
   name: 'octosmashed-fixtures-ember-cli', // Change name
-  outputPath: 'dummy/posts-fixtures',
+  // outputPath: 'dummy/posts-fixtures',
 
   included: function(app) {
     this.app = app;

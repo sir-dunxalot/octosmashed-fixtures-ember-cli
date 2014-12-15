@@ -10,9 +10,10 @@ var CachingWriter = require('broccoli-caching-writer');
 var path = require('path');
 var fs = require('fs');
 // var Promise = require('rsvp').Promise;
-// var mkdirp = require('mkdirp');
+var mkdirp = require('mkdirp');
 // var helpers = require('broccoli-kitchen-sink-helpers');
 var walkSync = require('walk-sync');
+var compiler = require('ember-template-compiler');
 
 var hljs = require('highlight.js');
 var jsYaml = require('yaml-front-matter');
@@ -79,15 +80,11 @@ var parsePost = function(content) {
   post['__content'] = replaceApostrophes(post['__content']);
 
   // Rename content
-  post['content'] = post['__content'];
+  post['body'] = post['__content'];
   delete post['__content'];
 
   post['id'] = currentPostId;
   currentPostId++;
-
-  // console
-
-  post = JSON.stringify(post);
 
   return post;
 }
@@ -95,6 +92,8 @@ var parsePost = function(content) {
 /**
 Create
 */
+
+// RENAME
 
 function BlogPostsParser(inputTree, options) {
   if (!(this instanceof BlogPostsParser)) {
@@ -109,37 +108,60 @@ function BlogPostsParser(inputTree, options) {
 
 BlogPostsParser.prototype = Object.create(CachingWriter.prototype);
 BlogPostsParser.prototype.constructor = BlogPostsParser;
-BlogPostsParser.prototype.extensions = ['md'];
-BlogPostsParser.prototype.targetExtension = 'js';
+// BlogPostsParser.prototype.extensions = ['md'];
+// BlogPostsParser.prototype.targetExtension = 'js';
 
 BlogPostsParser.prototype.updateCache = function(srcDir, destDir) {
   var _this = this;
   var filePaths = walkSync(srcDir);
-  var destFilePath  = path.join(destDir + '/dummy/posts-fixtures.js');
-  var fileOptions = { encoding: 'utf8' };
+  var destFilePath  = path.join(destDir, '/posts-fixtures.js'); // TODO
+  var fileOptions = { encoding: 'utf8' }; // TODO
+  var templatesDir = path.join(destDir, '/dummy/templates');
   var fixtures = [];
 
-  // console.log(filePaths);
+  if (!filePaths.length) {
+    return;
+  }
+
+  if (!fs.exists(templatesDir)) {
+    mkdirp.sync(templatesDir);
+  }
+
+  // Need categories
 
   filePaths.forEach(function(filePath) {
-    var srcFilePath  = path.join(srcDir[0], filePath);
-    var isDirectory = srcFilePath.slice(-1) === '/';
-    var content;
+    var srcPath  = path.join(srcDir[0], filePath);
+    var isDirectory = srcPath.slice(-1) === '/';
+    var post;
 
-    if (!isDirectory) {
-      content = fs.readFileSync(srcFilePath, fileOptions);
-      content = parsePost(content);
+    if (isDirectory) {
+      if (!fs.exists(srcPath))
+      mkdirp.sync(path.join(destDir, filePath));
+    } else {
+      post = fs.readFileSync(srcPath, fileOptions);
+      post = parsePost(post);
 
-      fixtures.push('\n' + content);
+      var template = compiler.precompile(post['body']);
+      template = "Ember.Handlebars.template(" + template + ");\n";
+
+      // if (this.options.module === true) {
+        template = "import Ember from 'ember';\nexport default " + template;
+      // } else if (this.options.commonjs === true) {
+        // return "var Ember = require('ember');\nmodule.exports = " + template;
+      // } else {
+        // return "Ember.TEMPLATES['" + filename + "'] = " + template;
+      // }
+
+      fs.writeFileSync(templatesDir + '/' + post['urlString'] + '.js', template, fileOptions);
+
+      fixtures.push('\n' + JSON.stringify(post));
     }
   });
 
-  fixtures = 'export default [' + fixtures + '];var FINDME;';
+  // REMOVE FILES
 
-  console.log(fixtures);
-
-  fs.writeFileSync(destFilePath, fixtures, fileOptions);
-
+  fixtures = 'export default [' + fixtures + '];';
+  fs.writeFileSync(destFilePath, fixtures, fileOptions); // Write fixtures
 }
 
 module.exports = BlogPostsParser;
