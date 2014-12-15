@@ -30,10 +30,13 @@
     "highlight.js": "^8.0.0"
   },
   "devDependencies": {
+    "broccoli-caching-writer": "^0.5.4",
+    "broccoli-concat": "0.0.12",
     "broccoli-dep-filter": "^0.3.4",
     "broccoli-filter": "^0.1.10",
     "broccoli-funnel": "^0.1.6",
     "broccoli-kitchen-sink-helpers": "^0.2.5",
+    "broccoli-merge-trees": "^0.2.1",
     "broccoli-writer": "^0.1.1",
     "ember-template-compiler": "^1.8.0",
     "handlebars": "^1.3.0",
