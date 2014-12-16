@@ -1,5 +1,5 @@
 var chalk = require('chalk');
-var fixtureCreator = require('./lib/fixture-creator');
+var fixturesCreator = require('./lib/fixtures-creator');
 var Funnel = require('broccoli-funnel');
 var mergeTrees = require('broccoli-merge-trees');
 
@@ -7,6 +7,7 @@ module.exports = {
   name: 'octosmashed-fixtures-ember-cli', // TODO - change name
   enabled: true,
   fileOptions: { encoding: 'utf8' },
+  // postsDirectory: 'posts',
   fixturesPath: 'posts-fixtures',
   templatesDirectory: null,
 
@@ -22,26 +23,36 @@ module.exports = {
   },
 
   included: function(app) {
+    var _this = this;
     var fixturesOptions = {};
+
     this.app = app;
     this.setOptions();
 
-    fixturesOptions.fileOptions = this.fileOptions;
-    fixturesOptions.fixturesPath = this.fixturesPath;
-    fixturesOptions.templatesDirectory = this.templatesDirectory;
-
+    [
+      'fileOptions',
+      'fixturesPath',
+      'templatesDirectory'
+    ].forEach(function(option) {
+      fixturesOptions[option] = _this[option];
+    });
 
     if (this.enabled) {
       app.registry.add('js', {
         name: 'octosmashed-posts-templates',
         ext: 'md',
+
+        /* https://github.com/stefanpenner/ember-cli/blob/master/lib/preprocessors/javascript-plugin.js */
+
         toTree: function(tree) {
           var posts = new Funnel(tree, {
-            // srcDir: 'dummy/posts'
-            include: [new RegExp(/\/posts\/.*.md$/)] // .md
+            include: [new RegExp(/\/posts\/.*.md$/)]
+            // srcDir: postsDir,
+            // include: [new RegExp(/^.*\.(md|hbs)$/)]
           });
+          var fixturesTree = fixturesCreator(posts, fixturesOptions);
 
-          return mergeTrees([tree, fixtureCreator(posts, fixturesOptions)], {
+          return mergeTrees([tree, fixturesTree], {
             overwrite: true
           });
         }
